@@ -24,7 +24,6 @@ View your app in AI Studio: https://ai.studio/apps/d3fe911a-6510-4941-a8ae-eda65
    select id from auth.users where email = 'you@example.com'
    on conflict (user_id) do nothing;
    ```
-
 6. For access requests and profile linking, run [`supabase/access_requests.sql`](./supabase/access_requests.sql) in the SQL Editor. Then run [`supabase/self_service_profiles.sql`](./supabase/self_service_profiles.sql). This migration allows access requests without a profile and requires approval before a profile can be created; rerun it to upgrade an earlier version of the self-service flow. For already-authorized users to securely link a member with the same verified email, run [`supabase/link_existing_account.sql`](./supabase/link_existing_account.sql).
 7. Run [`supabase/account_holder_permissions.sql`](./supabase/account_holder_permissions.sql) after the other SQL scripts. It limits household member profile reads to account holders and each user's own profile, and restricts member changes and access-request approvals to account holders. Account-holder profiles with a matching authorized login email are linked automatically when the match is unambiguous. This is required for existing Supabase projects; the app also hides member details and controls from non-account-holders.
    To specifically make Carl the account holder, run [`supabase/promote_carl_account_holder.sql`](./supabase/promote_carl_account_holder.sql) after that migration. It promotes the unique profile named Carl and requires its email to match an already-authorized login.
