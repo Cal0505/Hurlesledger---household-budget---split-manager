@@ -1,0 +1,179 @@
+@import "tailwindcss";
+
+@layer base {
+  body {
+    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    color: #171717;
+    background-color: #f8fafc;
+  }
+  .tabular-nums {
+    font-variant-numeric: tabular-nums;
+  }
+  .font-mono {
+    font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, monospace;
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+:root[data-theme='dark'] body {
+  color: #e5e7eb;
+  background-color: #0b0e12;
+}
+
+:root[data-theme='dark'] [class~='bg-white'] {
+  background-color: #161b22;
+}
+
+:root[data-theme='dark'] [class~='bg-neutral-50'],
+:root[data-theme='dark'] [class~='bg-neutral-50/50'],
+:root[data-theme='dark'] [class~='bg-neutral-50/60'],
+:root[data-theme='dark'] [class~='bg-neutral-50/70'],
+:root[data-theme='dark'] [class~='bg-neutral-50/80'],
+:root[data-theme='dark'] [class~='bg-neutral-50/90'] {
+  background-color: #11161c;
+}
+
+:root[data-theme='dark'] [class~='bg-neutral-100'] {
+  background-color: #1c232c;
+}
+
+:root[data-theme='dark'] [class~='bg-neutral-200'] {
+  background-color: #29313b;
+}
+
+:root[data-theme='dark'] [class~='bg-neutral-900'] {
+  background-color: #e5e7eb;
+}
+
+:root[data-theme='dark'] [class~='bg-neutral-900'][class~='text-white'] {
+  color: #111827 !important;
+}
+
+:root[data-theme='dark'] [class~='text-neutral-900'] {
+  color: #f3f4f6;
+}
+
+:root[data-theme='dark'] [class~='text-neutral-800'] {
+  color: #e5e7eb;
+}
+
+:root[data-theme='dark'] [class~='text-neutral-700'] {
+  color: #d1d5db;
+}
+
+:root[data-theme='dark'] [class~='text-neutral-600'] {
+  color: #b0b8c4;
+}
+
+:root[data-theme='dark'] [class~='text-neutral-500'] {
+  color: #9ca3af;
+}
+
+:root[data-theme='dark'] [class~='text-neutral-400'] {
+  color: #9ca3af;
+}
+
+:root[data-theme='dark'] [class~='text-neutral-300'] {
+  color: #d1d5db;
+}
+
+:root[data-theme='dark'] [class~='border-neutral-100'],
+:root[data-theme='dark'] [class~='border-neutral-200'] {
+  border-color: #303944;
+}
+
+:root[data-theme='dark'] [class~='border-neutral-300'] {
+  border-color: #46515e;
+}
+
+:root[data-theme='dark'] [class~='divide-neutral-100'] > :not(:last-child) {
+  border-color: #303944;
+}
+
+:root[data-theme='dark'] [class~='hover:bg-neutral-50']:hover,
+:root[data-theme='dark'] [class~='hover:bg-neutral-50/70']:hover {
+  background-color: #202833;
+}
+
+:root[data-theme='dark'] [class~='hover:bg-neutral-100']:hover {
+  background-color: #29313b;
+}
+
+:root[data-theme='dark'] [class~='hover:bg-neutral-200']:hover {
+  background-color: #374151;
+}
+
+:root[data-theme='dark'] [class~='hover:text-neutral-900']:hover {
+  color: #f9fafb;
+}
+
+:root[data-theme='dark'] [class~='bg-emerald-50'] {
+  background-color: #12352c;
+}
+
+:root[data-theme='dark'] [class~='bg-amber-50'],
+:root[data-theme='dark'] [class~='bg-amber-100'] {
+  background-color: #3b2c13;
+}
+
+:root[data-theme='dark'] [class~='bg-blue-50'] {
+  background-color: #162d4d;
+}
+
+:root[data-theme='dark'] [class~='bg-rose-50'] {
+  background-color: #451d24;
+}
+
+:root[data-theme='dark'] [class~='text-emerald-700'],
+:root[data-theme='dark'] [class~='text-emerald-600'],
+:root[data-theme='dark'] [class~='text-emerald-800'] {
+  color: #6ee7b7;
+}
+
+:root[data-theme='dark'] [class~='text-amber-700'],
+:root[data-theme='dark'] [class~='text-amber-800'],
+:root[data-theme='dark'] [class~='text-amber-900'] {
+  color: #fcd34d;
+}
+
+:root[data-theme='dark'] [class~='text-blue-700'],
+:root[data-theme='dark'] [class~='text-blue-600'] {
+  color: #93c5fd;
+}
+
+:root[data-theme='dark'] [class~='text-rose-700'],
+:root[data-theme='dark'] [class~='text-rose-800'],
+:root[data-theme='dark'] [class~='text-rose-900'] {
+  color: #fda4af;
+}
+
+:root[data-theme='dark'] input,
+:root[data-theme='dark'] select,
+:root[data-theme='dark'] textarea {
+  color: #f3f4f6;
+  background-color: #11161c;
+  border-color: #46515e;
+}
+
+:root[data-theme='dark'] input::placeholder,
+:root[data-theme='dark'] textarea::placeholder {
+  color: #9ca3af;
+}
+
+:root[data-theme='dark'] .access-screen {
+  color-scheme: light;
+}
+
+:root[data-theme='dark'] .access-screen [class~='bg-white'] {
+  background-color: #fff;
+}
+
+:root[data-theme='dark'] .access-screen input {
+  color: #233128;
+  background-color: #fff;
+  border-color: #dce2da;
+}
+
+:root[data-theme='dark'] .access-screen input::placeholder {
+  color: #788279;
+}

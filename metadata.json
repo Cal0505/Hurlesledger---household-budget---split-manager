@@ -1,0 +1,6 @@
+{
+  "name": "HearthLedger - Household Budget & Split Manager",
+  "description": "Multi-member household expense tracker with smart bill splitting, custom exclusions, bank CSV import, and personal cash flow management.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

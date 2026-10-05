@@ -1,0 +1,8 @@
+{
+  "appId": "com.hearthledger.app",
+  "appName": "HearthLedger",
+  "webDir": "dist",
+  "android": {
+    "path": "HearthLedger_android"
+  }
+}
