@@ -1,8 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { LogOut, Menu, Monitor, Moon, Plus, Settings, Sun, Upload } from 'lucide-react';
 import { ActiveTab, Transaction } from '../types/budget';
-
-export type ThemeMode = 'light' | 'dark' | 'system';
+// Import from shared constants — NO circular import!
+import { ThemeMode, AccentColor, ACCENT_COLORS } from '../constants/theme';
 
 interface HeaderProps {
   activeTab: ActiveTab;
@@ -13,6 +13,8 @@ interface HeaderProps {
   onOpenMobileMenu: () => void;
   themeMode: ThemeMode;
   onChangeTheme: (theme: ThemeMode) => void;
+  accentColor: AccentColor;
+  onChangeAccent: (accent: AccentColor) => void;
   userEmail: string;
   onSignOut: () => Promise<void>;
 }
@@ -26,6 +28,8 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenMobileMenu,
   themeMode,
   onChangeTheme,
+  accentColor,
+  onChangeAccent,
   userEmail,
   onSignOut,
 }) => {
@@ -36,7 +40,6 @@ export const Header: React.FC<HeaderProps> = ({
 
   useEffect(() => {
     if (!settingsOpen) return;
-
     const handlePointerDown = (event: PointerEvent) => {
       if (event.target instanceof Node && !settingsRef.current?.contains(event.target)) {
         setSettingsOpen(false);
@@ -48,7 +51,6 @@ export const Header: React.FC<HeaderProps> = ({
         settingsButtonRef.current?.focus();
       }
     };
-
     document.addEventListener('pointerdown', handlePointerDown);
     document.addEventListener('keydown', handleKeyDown);
     return () => {
@@ -59,20 +61,13 @@ export const Header: React.FC<HeaderProps> = ({
 
   const getBreadcrumbTitle = () => {
     switch (activeTab) {
-      case 'dashboard':
-        return 'Personal Dashboard';
-      case 'incoming':
-        return 'Incoming Money & Deposits';
-      case 'outgoing':
-        return 'Outgoing Expenses & Debits';
-      case 'household-bills':
-        return 'Household Bills & Split Rules';
-      case 'members':
-        return 'Member Profiles & Allocations';
-      case 'settlement':
-        return 'Settlement Matrix & Balances';
-      default:
-        return 'Dashboard';
+      case 'dashboard': return 'Personal Dashboard';
+      case 'incoming': return 'Incoming Money & Deposits';
+      case 'outgoing': return 'Outgoing Expenses & Debits';
+      case 'household-bills': return 'Household Bills & Split Rules';
+      case 'members': return 'Member Profiles & Allocations';
+      case 'settlement': return 'Settlement Matrix & Balances';
+      default: return 'Dashboard';
     }
   };
 
@@ -90,7 +85,6 @@ export const Header: React.FC<HeaderProps> = ({
         >
           <Menu className="w-5 h-5" />
         </button>
-
         <div className="flex items-center gap-2 text-sm">
           <span className="text-neutral-600 font-medium hidden sm:inline">Hearth</span>
           <span className="text-neutral-400 hidden sm:inline" aria-hidden="true">/</span>
@@ -102,42 +96,41 @@ export const Header: React.FC<HeaderProps> = ({
 
       {/* Zone 2: Month / Household context */}
       {isAccountHolder && (
-      <div className="hidden md:flex items-center gap-2 text-xs text-neutral-600">
-        <span>Cycle: <strong className="font-semibold text-neutral-800">{currentMonthYear}</strong></span>
-        <span aria-hidden="true">·</span>
-        <span>Account: <strong className="font-semibold text-neutral-800">Lora &amp; Carl (Shared)</strong></span>
-      </div>
+        <div className="hidden md:flex items-center gap-2 text-xs text-neutral-600">
+          <span>Cycle: <strong className="font-semibold text-neutral-800">{currentMonthYear}</strong></span>
+          <span aria-hidden="true">·</span>
+          <span>Account: <strong className="font-semibold text-neutral-800">Lora &amp; Carl (Shared)</strong></span>
+        </div>
       )}
 
       {/* Zone 3: Primary Actions */}
       <div className="flex items-center gap-1 sm:gap-2">
         {isAccountHolder && <>
-        <button
-          onClick={onOpenImportCsv}
-          className="inline-flex items-center gap-1.5 px-2 sm:px-3 py-1.5 text-xs font-medium text-neutral-700 bg-neutral-100 hover:bg-neutral-200 rounded-md transition-colors whitespace-nowrap"
-          title="Import bank statement CSV"
-        >
-          <Upload className="w-3.5 h-3.5" />
-          <span className="hidden sm:inline">Import CSV</span>
-        </button>
-
-        {activeTab === 'household-bills' ? (
           <button
-            onClick={onOpenAddBill}
-            className="inline-flex items-center gap-1.5 px-2 sm:px-3 py-1.5 text-xs font-medium text-white bg-neutral-900 hover:bg-neutral-800 rounded-md transition-colors whitespace-nowrap shadow-xs"
+            onClick={onOpenImportCsv}
+            className="inline-flex items-center gap-1.5 px-2 sm:px-3 py-1.5 text-xs font-medium text-neutral-700 bg-neutral-100 hover:bg-neutral-200 rounded-md transition-colors whitespace-nowrap"
+            title="Import bank statement CSV"
           >
-            <Plus className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Add Bill</span>
+            <Upload className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Import CSV</span>
           </button>
-        ) : (
-          <button
-            onClick={() => onOpenAddTransaction()}
-            className="inline-flex items-center gap-1.5 px-2 sm:px-3 py-1.5 text-xs font-medium text-white bg-neutral-900 hover:bg-neutral-800 rounded-md transition-colors whitespace-nowrap shadow-xs"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Record Flow</span>
-          </button>
-        )}
+          {activeTab === 'household-bills' ? (
+            <button
+              onClick={onOpenAddBill}
+              className="inline-flex items-center gap-1.5 px-2 sm:px-3 py-1.5 text-xs font-medium text-white bg-neutral-900 hover:bg-neutral-800 rounded-md transition-colors whitespace-nowrap shadow-xs"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Add Bill</span>
+            </button>
+          ) : (
+            <button
+              onClick={() => onOpenAddTransaction()}
+              className="inline-flex items-center gap-1.5 px-2 sm:px-3 py-1.5 text-xs font-medium text-white bg-neutral-900 hover:bg-neutral-800 rounded-md transition-colors whitespace-nowrap shadow-xs"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Record Flow</span>
+            </button>
+          )}
         </>}
 
         <div className="relative" ref={settingsRef}>
@@ -170,6 +163,7 @@ export const Header: React.FC<HeaderProps> = ({
                 <Settings className="w-4 h-4 text-neutral-400 mt-0.5" />
               </div>
 
+              {/* Base Theme Mode */}
               <div className="mt-3 grid grid-cols-3 gap-1 rounded-lg bg-neutral-100 p-1">
                 {([
                   { value: 'light', label: 'Light', Icon: Sun },
@@ -191,6 +185,36 @@ export const Header: React.FC<HeaderProps> = ({
                     {label}
                   </button>
                 ))}
+              </div>
+
+              {/* Accent Color Picker — NEW */}
+              <div className="mt-4">
+                <p className="mb-2 text-xs font-medium text-neutral-500">Accent Color</p>
+                <div className="grid grid-cols-4 gap-2">
+                  {ACCENT_COLORS.map((accent) => (
+                    <button
+                      key={accent.id}
+                      type="button"
+                      onClick={() => onChangeAccent(accent.id)}
+                      title={accent.label}
+                      className={`relative w-full aspect-square rounded-lg transition-transform hover:scale-105 ${
+                        accentColor === accent.id ? 'ring-2 ring-neutral-400 ring-offset-2' : ''
+                      }`}
+                      style={{ backgroundColor: accent.hex }}
+                    >
+                      {accentColor === accent.id && (
+                        <span className="absolute inset-0 flex items-center justify-center text-white text-xs font-bold">✓</span>
+                      )}
+                    </button>
+                  ))}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => onChangeAccent(null)}
+                  className="mt-2 w-full text-xs text-center text-neutral-500 hover:text-neutral-700"
+                >
+                  Reset to default
+                </button>
               </div>
 
               <div className="mt-4 border-t border-neutral-100 pt-3">

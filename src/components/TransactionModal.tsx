@@ -5,16 +5,17 @@ import { HouseholdBill, Member, Transaction, TransactionType } from '../types/bu
 interface TransactionModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSaveTransaction: (tx: Omit<Transaction, 'id' | 'createdAt'>) => void;
+  onSaveTransaction: (tx: Omit<Transaction, 'id' | 'createdAt'>, existingId?: string) => void;
   members: Member[];
   bills: HouseholdBill[];
   currencySymbol: string;
   prefill?: Partial<Transaction> | null;
+  editId?: string;
 }
 
 const INCOMING_CATEGORIES = [
   'Household Reimbursement',
-  'Salary / Wage',
+  'Salary / Wage / Benefits',
   'Freelance / Side Gig',
   'Transfer / Refund',
   'Investment / Interest',
@@ -32,6 +33,7 @@ const OUTGOING_CATEGORIES = [
   'Healthcare',
   'Other Expense',
 ];
+
 export const TransactionModal: React.FC<TransactionModalProps> = ({
   isOpen,
   onClose,
@@ -40,9 +42,9 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
   bills,
   currencySymbol,
   prefill,
+  editId,
 }) => {
   const todayStr = new Date().toISOString().slice(0, 10);
-
   const [type, setType] = useState<TransactionType>('incoming');
   const [date, setDate] = useState(todayStr);
   const [description, setDescription] = useState('');
@@ -53,6 +55,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
   const [linkedBillId, setLinkedBillId] = useState('');
   const [notes, setNotes] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
+
   useEffect(() => {
     if (prefill) {
       setType(prefill.type || 'incoming');
@@ -82,10 +85,12 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+
     if (!description.trim()) {
       setErrorMsg('Please enter a description.');
       return;
     }
+
     const parsedAmount = parseFloat(amount);
     if (!parsedAmount || parsedAmount <= 0) {
       setErrorMsg('Please enter a valid amount.');
@@ -94,23 +99,27 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
 
     const finalMemberId = type === 'incoming' && fromMemberId ? fromMemberId : undefined;
 
-    onSaveTransaction({
-      date,
-      type,
-      paymentMethod: type === 'incoming' ? paymentMethod : 'bank',
-      description: description.trim(),
-      amount: parsedAmount,
-      category,
-      account: type === 'incoming' && paymentMethod === 'cash' ? 'Cash' : 'Primary Shared Account',
-      fromMemberId: finalMemberId,
-      linkedBillId: type === 'outgoing' && linkedBillId ? linkedBillId : undefined,
-      notes: notes.trim(),
-      source: 'manual',
-      ...((prefill as any)?.memberId || finalMemberId ? { memberId: (prefill as any)?.memberId || finalMemberId } : {})
-    } as any);
+    onSaveTransaction(
+      {
+        date,
+        type,
+        paymentMethod: type === 'incoming' ? paymentMethod : 'bank',
+        description: description.trim(),
+        amount: parsedAmount,
+        category,
+        account: prefill?.account || (type === 'incoming' && paymentMethod === 'cash' ? 'Cash' : 'Primary Shared Account'),
+        fromMemberId: finalMemberId,
+        linkedBillId: type === 'outgoing' && linkedBillId ? linkedBillId : undefined,
+        notes: notes.trim(),
+        source: 'manual',
+        ...((prefill as any)?.memberId || finalMemberId ? { memberId: (prefill as any)?.memberId || finalMemberId } : {}),
+      } as any,
+      editId
+    );
 
     onClose();
   };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-neutral-900/50 backdrop-blur-xs">
       <div className="bg-white border border-neutral-200 rounded-xl shadow-xl w-full max-w-md flex flex-col overflow-hidden">
@@ -122,9 +131,11 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
               <ArrowUpRight className="w-5 h-5 text-amber-600" />
             )}
             <h3 className="text-base font-bold text-neutral-900">
-              {type === 'incoming'
-                ? paymentMethod === 'cash' ? 'Record Cash Payment' : 'Record Bank Inflow'
-                : 'Record Bank Outflow'}
+              {editId ? 'Edit Transaction' : (
+                type === 'incoming'
+                  ? paymentMethod === 'cash' ? 'Record Cash Payment' : 'Record Bank Inflow'
+                  : 'Record Bank Outflow'
+              )}
             </h3>
           </div>
           <button
@@ -173,6 +184,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
               Outgoing Outflow (-)
             </button>
           </div>
+
           {type === 'incoming' && (
             <div>
               <label className="block text-xs font-semibold text-neutral-700 mb-1">
@@ -202,7 +214,6 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
                 required
               />
             </div>
-
             <div>
               <label className="block text-xs font-semibold text-neutral-700 mb-1">
                 Amount ({currencySymbol}) *
@@ -232,6 +243,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
               required
             />
           </div>
+
           <div>
             <label className="block text-xs font-semibold text-neutral-700 mb-1">
               Category
@@ -317,7 +329,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
               type="submit"
               className="px-4 py-2 bg-neutral-900 text-white rounded-md text-xs font-semibold hover:bg-neutral-800 transition-colors shadow-xs"
             >
-              Save Transaction
+              {editId ? 'Update Transaction' : 'Save Transaction'}
             </button>
           </div>
         </form>

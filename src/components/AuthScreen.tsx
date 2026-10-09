@@ -4,12 +4,9 @@ import {
   AlertCircle,
   ArrowRight,
   CheckCircle2,
-  CircleDollarSign,
-  LockKeyhole,
-  ReceiptText,
-  ShieldCheck,
-  Users,
-  Wallet,
+  Shield,
+  UserPlus,
+  LogIn,
 } from 'lucide-react';
 
 interface AuthScreenProps {
@@ -17,337 +14,286 @@ interface AuthScreenProps {
   initialError?: string;
 }
 
+type Mode = 'signin' | 'signup' | 'reset';
+
 export const AuthScreen: React.FC<AuthScreenProps> = ({ client, initialError }) => {
+  const [mode, setMode] = useState<Mode>('signin');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
   const [notice, setNotice] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isResetMode, setIsResetMode] = useState(false);
-  const [canCreateAccount, setCanCreateAccount] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
 
-  const handleRequestAccess = async () => {
-    if (!formRef.current?.reportValidity()) return;
+  const resetState = () => {
     setErrorMessage('');
     setNotice('');
-    if (password.length < 6) {
-      setErrorMessage('Your password must be at least 6 characters.');
-      return;
-    }
-    setIsSubmitting(true);
-    try {
-      if (!client) {
-        setErrorMessage('Supabase is not configured. Add the required environment variables and restart the app.');
-        return;
-      }
-
-      const { data, error } = await client.auth.signUp({
-        email: email.trim(),
-        password,
-      });
-      if (error) {
-        const message = error.message.toLowerCase();
-        if (message.includes('rate limit') || message.includes('email rate')) {
-          setCanCreateAccount(false);
-          setErrorMessage('Account creation is temporarily unavailable. Please try again later, or sign in if you already have an account.');
-          return;
-        }
-        throw error;
-      }
-      if (data.user?.identities?.length === 0) {
-        setCanCreateAccount(false);
-        setNotice('An account may already exist for this email. Try signing in or use Forgot password.');
-        return;
-      }
-      setCanCreateAccount(false);
-      if (!data.session) {
-        setNotice('Supabase requires email confirmation before sign-in. Complete its confirmation step, or ask the project administrator to turn off Confirm email. Then sign in and submit your household access request.');
-      } else {
-        setNotice('Your account is ready. Submit your household access request on the next screen.');
-      }
-    } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : 'Unable to request access. Please try again.');
-    } finally {
-      setIsSubmitting(false);
-    }
+    setEmail('');
+    setPassword('');
+    setConfirmPassword('');
   };
 
-  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  const handleModeChange = (newMode: Mode) => {
+    resetState();
+    setMode(newMode);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
     setErrorMessage('');
     setNotice('');
-    setCanCreateAccount(false);
     setIsSubmitting(true);
 
     try {
       if (!client) {
-        setErrorMessage('Supabase is not configured. Add the required environment variables and restart the app.');
+        setErrorMessage('Supabase is not configured. Add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to your environment variables.');
         return;
       }
 
-      if (isResetMode) {
+      if (mode === 'signup') {
+        if (password.length < 6) {
+          setErrorMessage('Password must be at least 6 characters.');
+          return;
+        }
+        if (password !== confirmPassword) {
+          setErrorMessage('Passwords do not match.');
+          return;
+        }
+
+        const { data, error } = await client.auth.signUp({
+          email: email.trim(),
+          password,
+        });
+
+        if (error) {
+          const msg = error.message.toLowerCase();
+          if (msg.includes('rate limit') || msg.includes('email rate')) {
+            setErrorMessage('Too many attempts. Please try again later.');
+            return;
+          }
+          throw error;
+        }
+
+        if (data.user?.identities?.length === 0) {
+          setNotice('An account already exists for this email. Please sign in.');
+          setMode('signin');
+          return;
+        }
+
+        setNotice('Account created! Check your email to verify, then sign in.');
+        setMode('signin');
+        return;
+      }
+
+      if (mode === 'reset') {
         const { error } = await client.auth.resetPasswordForEmail(email.trim(), {
           redirectTo: window.location.origin,
         });
         if (error) throw error;
-        setNotice('If an account exists for that email, a password reset link has been sent.');
-      } else {
-        const { error } = await client.auth.signInWithPassword({
-          email: email.trim(),
-          password,
-        });
-        if (error) throw error;
+        setNotice('If an account exists, a reset link has been sent to your email.');
+        return;
       }
-    } catch (error) {
-      if (!isResetMode) {
-        const message = error instanceof Error ? error.message : 'Sign-in failed. Please try again.';
-        const isInvalidCredentials = message.toLowerCase().includes('invalid login credentials') ||
-          (typeof error === 'object' && error !== null && 'code' in error && error.code === 'invalid_credentials');
-        if (isInvalidCredentials) {
-          setErrorMessage('We couldn’t sign you in with those details.');
-          setCanCreateAccount(true);
-        } else {
-          setErrorMessage(message);
-        }
-      } else {
-        setErrorMessage(error instanceof Error ? error.message : 'Unable to send a password reset link.');
-      }
+
+      const { error } = await client.auth.signInWithPassword({
+        email: email.trim(),
+        password,
+      });
+      if (error) throw error;
+
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Something went wrong. Please try again.';
+      setErrorMessage(msg);
     } finally {
       setIsSubmitting(false);
     }
   };
 
   return (
-    <main className="auth-screen min-h-screen bg-[#f4f6f1] px-4 py-6 sm:px-8 sm:py-10">
-      <div className="mx-auto flex min-h-[calc(100vh-3rem)] w-full max-w-6xl items-center justify-center">
-        <div className="grid w-full overflow-hidden rounded-[28px] border border-[#e1e7dd] bg-white shadow-[0_24px_80px_-32px_rgba(34,53,38,0.24)] lg:min-h-[680px] lg:grid-cols-[1.08fr_0.92fr]">
-          <section className="relative flex flex-col justify-between overflow-hidden bg-[#eaf0e6] px-7 py-8 sm:px-12 sm:py-11 lg:px-14 lg:py-12">
-            <div className="pointer-events-none absolute -right-28 -top-24 h-80 w-80 rounded-full bg-[#d8e4d2]" />
-            <div className="pointer-events-none absolute -bottom-32 -left-20 h-72 w-72 rounded-full border-[44px] border-[#dce7d7]" />
+    <main className="min-h-screen bg-[#f5f8f0] flex items-center justify-center p-4 relative overflow-hidden">
+      {/* Soft background glow */}
+      <div className="absolute top-0 left-1/4 w-[600px] h-[600px] rounded-full bg-[#d8e4d2]/40 blur-3xl -translate-y-1/3" />
+      <div className="absolute bottom-0 right-1/4 w-[500px] h-[500px] rounded-full bg-[#2f6b4a]/5 blur-3xl translate-y-1/3" />
 
-            <div className="relative flex items-center gap-3">
-              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#294d3a] text-white shadow-sm">
-                <Wallet className="h-5 w-5" />
-              </div>
-              <div>
-                <div className="text-lg font-bold tracking-tight text-[#20382b]">HearthLedger</div>
-                <div className="text-xs font-medium text-[#5e7462]">Household finances, made clear</div>
-              </div>
-            </div>
-
-            <div className="relative my-10 max-w-lg lg:my-0">
-              <p className="mb-4 inline-flex items-center gap-2 rounded-full border border-[#cddac8] bg-white/60 px-3 py-1.5 text-xs font-semibold text-[#42624b]">
-                <span className="h-1.5 w-1.5 rounded-full bg-[#598260]" />
-                A calmer way to manage shared costs
-              </p>
-              <h1 className="max-w-md text-4xl font-semibold leading-[1.12] tracking-tight text-[#20382b] sm:text-5xl">
-                Home finances,
-                <br />
-                all in one place.
-              </h1>
-              <p className="mt-5 max-w-md text-sm leading-6 text-[#526756] sm:text-base">
-                Keep bills, payments, and household contributions clear and fair for everyone.
-              </p>
-
-              <div className="mt-9 max-w-md rounded-2xl border border-[#dce4d8] bg-white/90 p-5 shadow-[0_12px_32px_-24px_rgba(34,53,38,0.35)]">
-                <div className="flex items-center justify-between border-b border-[#edf0ea] pb-4">
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#f0f4ed] text-[#41664c]">
-                      <ReceiptText className="h-5 w-5" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-semibold text-[#263a2c]">Household overview</p>
-                      <p className="mt-0.5 text-xs text-[#738176]">Everyone on the same page</p>
-                    </div>
-                  </div>
-                  <span className="rounded-full bg-[#edf5ec] px-2.5 py-1 text-[11px] font-semibold text-[#4a7550]">
-                    Up to date
-                  </span>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3 pt-4">
-                  <div className="rounded-xl bg-[#f7f8f5] p-3.5">
-                    <div className="flex items-center gap-2 text-xs font-medium text-[#718073]">
-                      <CircleDollarSign className="h-4 w-4 text-[#628267]" />
-                      Shared bills
-                    </div>
-                    <div className="mt-2 text-lg font-semibold tracking-tight text-[#263a2c]">One clear view</div>
-                  </div>
-                  <div className="rounded-xl bg-[#f7f8f5] p-3.5">
-                    <div className="flex items-center gap-2 text-xs font-medium text-[#718073]">
-                      <Users className="h-4 w-4 text-[#628267]" />
-                      Household
-                    </div>
-                    <div className="mt-2 text-lg font-semibold tracking-tight text-[#263a2c]">Fair splits</div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="relative flex items-center gap-2 text-xs font-medium text-[#647568]">
-              <ShieldCheck className="h-4 w-4 text-[#5f7d62]" />
-              Private household workspace
-            </div>
-          </section>
-
-          <section className="flex items-center justify-center px-6 py-10 sm:px-12 lg:px-14">
-            <div className="w-full max-w-sm">
-              <div className="mb-8">
-                <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-2xl bg-[#eff5ed] text-[#41664c]">
-                  <LockKeyhole className="h-5 w-5" />
-                </div>
-                <h2 className="text-2xl font-semibold tracking-tight text-[#1f2d23]">
-                  {isResetMode ? 'Reset your password' : 'Welcome'}
-                </h2>
-                <p className="mt-2 text-sm leading-6 text-[#657168]">
-                  {isResetMode
-                    ? 'Enter your email and we’ll send you a secure reset link.'
-                    : 'Enter your email and password to sign in or request household access.'}
-                </p>
-              </div>
-
-              {(initialError || (!client && !errorMessage)) && (
-                <div className="mb-5 rounded-xl border border-[#e8d49b] bg-[#fff9e9] p-4 text-[#624919]">
-                  <div className="flex items-start gap-2.5">
-                    <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-[#a77b27]" />
-                    <div>
-                      <p className="text-sm font-semibold">Sign-in setup needed</p>
-                      <p className="mt-1 text-xs leading-5 text-[#765c2b]">
-                        Add <code className="rounded bg-[#f7edcf] px-1 py-0.5">VITE_SUPABASE_URL</code> and{' '}
-                        <code className="rounded bg-[#f7edcf] px-1 py-0.5">VITE_SUPABASE_ANON_KEY</code> to the app
-                        environment, then restart it.
-                      </p>
-                      {initialError && <p className="mt-2 text-xs leading-5 text-[#765c2b]">{initialError}</p>}
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {errorMessage && (
-                <div role="alert" className="mb-5 flex items-start gap-2.5 rounded-xl border border-rose-200 bg-rose-50 p-3.5 text-sm text-rose-800">
-                  <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
-                  <span>{errorMessage}</span>
-                </div>
-              )}
-
-              {notice && (
-                <div role="status" className="mb-5 flex items-start gap-2.5 rounded-xl border border-emerald-200 bg-emerald-50 p-3.5 text-sm text-emerald-800">
-                  <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" />
-                  <span>{notice}</span>
-                </div>
-              )}
-
-              <form ref={formRef} onSubmit={handleSubmit} className="space-y-5">
-                <div>
-                  <label htmlFor="login-email" className="mb-2 block text-xs font-semibold uppercase tracking-wide text-[#4c5a50]">
-                    Email address
-                  </label>
-                  <input
-                    id="login-email"
-                    type="email"
-                    autoComplete="email"
-                    value={email}
-                    onChange={(event) => {
-                      setEmail(event.target.value);
-                      setCanCreateAccount(false);
-                      setErrorMessage('');
-                      setNotice('');
-                    }}
-                    required
-                    className="w-full rounded-xl border border-[#dce2da] bg-white px-4 py-3.5 text-sm text-[#233128] outline-none transition placeholder:text-[#a1aaa2] focus:border-[#729276] focus:ring-4 focus:ring-[#729276]/15"
-                    placeholder="you@example.com"
-                  />
-                </div>
-
-                {!isResetMode && (
-                  <div>
-                    <div className="mb-2 flex items-center justify-between">
-                      <label htmlFor="login-password" className="block text-xs font-semibold uppercase tracking-wide text-[#4c5a50]">
-                        Password
-                      </label>
-                      {client && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setIsResetMode(true);
-                            setErrorMessage('');
-                            setNotice('');
-                          }}
-                          className="text-xs font-semibold text-[#4b7252] hover:text-[#2c4a34]"
-                        >
-                          Forgot password?
-                        </button>
-                      )}
-                    </div>
-                    <input
-                      id="login-password"
-                      type="password"
-                      autoComplete="current-password"
-                      value={password}
-                      onChange={(event) => {
-                        setPassword(event.target.value);
-                        setCanCreateAccount(false);
-                        setErrorMessage('');
-                        setNotice('');
-                      }}
-                      required
-                      className="w-full rounded-xl border border-[#dce2da] bg-white px-4 py-3.5 text-sm text-[#233128] outline-none transition placeholder:text-[#a1aaa2] focus:border-[#729276] focus:ring-4 focus:ring-[#729276]/15"
-                      placeholder="Enter your password"
-                    />
-                  </div>
-                )}
-
-                <button
-                  type="submit"
-                  disabled={!client || isSubmitting}
-                  className="group inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#31563c] px-4 py-3.5 text-sm font-semibold text-white shadow-[0_8px_18px_-12px_rgba(49,86,60,0.8)] transition hover:bg-[#274831] focus:outline-none focus:ring-4 focus:ring-[#31563c]/20 disabled:cursor-not-allowed disabled:bg-[#aab5aa] disabled:text-white"
-                >
-                  {isSubmitting ? 'Please wait…' : isResetMode ? 'Send reset link' : 'Sign in'}
-                  {!isSubmitting && <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />}
-                </button>
-              </form>
-
-              {client && canCreateAccount && (
-                <div className="mt-4 rounded-xl border border-[#cddac8] bg-[#f5f8f3] p-4">
-                  <p className="text-sm font-semibold text-[#31563c]">New to this household?</p>
-                  <p className="mt-1 text-xs leading-5 text-[#657168]">
-                    Create an account with these details, then submit an access request. You can create a profile after approval.
-                  </p>
-                  <button
-                    type="button"
-                    onClick={() => void handleRequestAccess()}
-                    disabled={isSubmitting}
-                    className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#31563c] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[#274831] disabled:opacity-50"
-                  >
-                    {isSubmitting ? 'Please wait…' : 'Create account'}
-                  </button>
-                </div>
-              )}
-              {isResetMode && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsResetMode(false);
-                    setErrorMessage('');
-                    setNotice('');
-                  }}
-                  className="mt-4 block text-sm font-medium text-[#4b7252] hover:text-[#2c4a34]"
-                >
-                  Back to sign in
-                </button>
-              )}
-
-              <div className="mt-8 border-t border-[#edf0ea] pt-5 text-center">
-                <p className="text-xs leading-5 text-[#788279]">
-                  Household accounts are managed by your workspace administrator.
-                  <br />
-                  Contact them if you need access.
-                </p>
-              </div>
-            </div>
-          </section>
+      <div className="w-full max-w-md relative z-10">
+        {/* Brand */}
+        <div className="text-center mb-8">
+          <div className="inline-flex items-center justify-center w-14 h-14 rounded-xl bg-[#2f6b4a] text-white mb-4">
+            <Shield size={26} />
+          </div>
+          <h1 className="text-2xl font-bold text-[#1a3529]">HurlesLedger</h1>
+          <p className="text-sm text-[#5a7568] mt-1">Household finances, made clear</p>
         </div>
+
+        {/* Card */}
+        <div className="bg-white/90 backdrop-blur-md rounded-3xl shadow-lg border border-white/60 p-8">
+          {/* Mode Tabs — Improved contrast */}
+          <div className="flex mb-8 bg-[#e8f0e5] rounded-xl p-1">
+            <button
+              onClick={() => handleModeChange('signin')}
+              className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                mode === 'signin'
+                  ? 'bg-[#2f6b4a] text-white shadow-md'
+                  : 'text-[#5a7568] hover:text-[#2f6b4a] hover:bg-white/60'
+              }`}
+            >
+              <LogIn size={16} />
+              Sign In
+            </button>
+            <button
+              onClick={() => handleModeChange('signup')}
+              className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                mode === 'signup'
+                  ? 'bg-[#2f6b4a] text-white shadow-md'
+                  : 'text-[#5a7568] hover:text-[#2f6b4a] hover:bg-white/60'
+              }`}
+            >
+              <UserPlus size={16} />
+              Create Account
+            </button>
+          </div>
+
+          {/* Heading */}
+          <div className="mb-6">
+            <h2 className="text-xl font-semibold text-[#1a3529]">
+              {mode === 'signin' && 'Welcome back'}
+              {mode === 'signup' && 'Join HurlesLedger'}
+              {mode === 'reset' && 'Reset your password'}
+            </h2>
+            <p className="text-sm text-[#6b7b72] mt-1">
+              {mode === 'signin' && 'Sign in to manage your household finances'}
+              {mode === 'signup' && 'Get started with clear, shared household budgeting'}
+              {mode === 'reset' && 'Enter your email and we’ll send you a reset link'}
+            </p>
+          </div>
+
+          {/* Status Messages */}
+          {(initialError || (!client && !errorMessage)) && (
+            <div className="mb-5 p-4 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-sm">
+              <div className="flex items-start gap-3">
+                <AlertCircle size={16} className="mt-0.5 shrink-0" />
+                <div>
+                  <p className="font-semibold">Setup required</p>
+                  <p className="mt-1 text-xs opacity-80">
+                    Add your Supabase environment variables and restart the app.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {errorMessage && (
+            <div role="alert" className="mb-5 p-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-sm flex items-start gap-3">
+              <AlertCircle size={16} className="mt-0.5 shrink-0" />
+              {errorMessage}
+            </div>
+          )}
+
+          {notice && (
+            <div role="status" className="mb-5 p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm flex items-start gap-3">
+              <CheckCircle2 size={16} className="mt-0.5 shrink-0" />
+              {notice}
+            </div>
+          )}
+
+          {/* Form */}
+          <form ref={formRef} onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label htmlFor="email" className="block text-xs font-semibold uppercase tracking-wider text-[#5a7568] mb-2">
+                Email Address
+              </label>
+              <input
+                id="email"
+                type="email"
+                autoComplete={mode === 'signup' ? 'email' : 'username'}
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                className="w-full rounded-xl border border-[#c8d4c2] bg-[#f0f5ed] px-4 py-3.5 text-sm text-[#1a3529] outline-none transition placeholder:text-[#94a898] focus:border-[#2f6b4a] focus:bg-white focus:ring-2 focus:ring-[#2f6b4a]/15"
+                placeholder="you@example.com"
+              />
+            </div>
+
+            {mode !== 'reset' && (
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <label htmlFor="password" className="block text-xs font-semibold uppercase tracking-wider text-[#5a7568]">
+                    Password
+                  </label>
+                  {mode === 'signin' && (
+                    <button
+                      type="button"
+                      onClick={() => handleModeChange('reset')}
+                      className="text-xs text-[#2f6b4a] hover:text-[#1a3529]"
+                    >
+                      Forgot password?
+                    </button>
+                  )}
+                </div>
+                <input
+                  id="password"
+                  type="password"
+                  autoComplete={mode === 'signup' ? 'new-password' : 'current-password'}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  className="w-full rounded-xl border border-[#c8d4c2] bg-[#f0f5ed] px-4 py-3.5 text-sm text-[#1a3529] outline-none transition placeholder:text-[#94a898] focus:border-[#2f6b4a] focus:bg-white focus:ring-2 focus:ring-[#2f6b4a]/15"
+                  placeholder={mode === 'signup' ? 'Create a password' : 'Enter your password'}
+                />
+              </div>
+            )}
+
+            {mode === 'signup' && (
+              <div>
+                <label htmlFor="confirmPassword" className="block text-xs font-semibold uppercase tracking-wider text-[#5a7568] mb-2">
+                  Confirm Password
+                </label>
+                <input
+                  id="confirmPassword"
+                  type="password"
+                  autoComplete="new-password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  required
+                  className="w-full rounded-xl border border-[#c8d4c2] bg-[#f0f5ed] px-4 py-3.5 text-sm text-[#1a3529] outline-none transition placeholder:text-[#94a898] focus:border-[#2f6b4a] focus:bg-white focus:ring-2 focus:ring-[#2f6b4a]/15"
+                  placeholder="Confirm your password"
+                />
+              </div>
+            )}
+
+            <button
+              type="submit"
+              disabled={!client || isSubmitting}
+              className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl bg-[#2f6b4a] hover:bg-[#25563c] text-white font-semibold text-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed mt-2"
+            >
+              {isSubmitting ? (
+                <span className="animate-pulse">Please wait…</span>
+              ) : (
+                <>
+                  {mode === 'signin' && 'Sign In'}
+                  {mode === 'signup' && 'Create Account'}
+                  {mode === 'reset' && 'Send Reset Link'}
+                  <ArrowRight size={16} />
+                </>
+              )}
+            </button>
+          </form>
+
+          {mode === 'reset' && (
+            <button
+              type="button"
+              onClick={() => handleModeChange('signin')}
+              className="mt-4 w-full text-center text-sm text-[#5a7568] hover:text-[#2f6b4a]"
+            >
+              ← Back to Sign In
+            </button>
+          )}
+        </div>
+
+        {/* Footer */}
+        <p className="text-center text-xs text-[#7a9486] mt-6">
+          Need access? Contact your workspace administrator.
+        </p>
       </div>
     </main>
   );

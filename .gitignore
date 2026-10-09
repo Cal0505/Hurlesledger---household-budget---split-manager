@@ -4,5 +4,8 @@ dist/
 coverage/
 .DS_Store
 *.log
-.env*
+
+# Environment variables — keep secrets safe
+.env
+.env.*
 !.env.example
